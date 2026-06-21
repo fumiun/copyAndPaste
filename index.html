@@ -288,8 +288,9 @@
           }
         });
 
-        item.appendChild(btn);
+        // DOM の順序をゴミ箱 -> スニペットの順にして、視覚とタブ順を一致させる
         item.appendChild(del);
+        item.appendChild(btn);
         listEl.appendChild(item);
       });
     }
