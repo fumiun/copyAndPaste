@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>定型文コピー</title>
+  <style>
+    :root{
+      --bg: #f7f7f9;
+      --card: #ffffff;
+      --text: #0b1220;
+      --muted: #516070;
+      --accent: #0066ff;
+      --danger: #e63946;
+      --glass: rgba(255,255,255,0.6);
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg: #0a0b0d;
+        --card: #0f1113;
+        --text: #e6eef8;
+        --muted: #98a0b0;
+        --accent: #4da3ff;
+        --danger: #ff7b86;
+        --glass: rgba(255,255,255,0.03);
+        color-scheme: dark;
+      }
+    }
+
+    /* 全体 */
+    html,body{
+      height:100%;
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+      background: linear-gradient(180deg, var(--bg), color-mix(in srgb, var(--bg) 96%, transparent));
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    .wrap{
+      max-width:720px;
+      margin:0 auto;
+      padding:16px;
+      box-sizing:border-box;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    header h1{
+      font-size:18px;
+      margin:0;
+      letter-spacing:0.2px;
+    }
+    header p{
+      margin:0;
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    /* 入力フォーム */
+    .form{
+      display:flex;
+      gap:8px;
+      margin-bottom:12px;
+    }
+    .form input[type="text"]{
+      flex:1;
+      padding:14px 12px;
+      font-size:16px;
+      border-radius:12px;
+      border:1px solid rgba(0,0,0,0.06);
+      background:var(--card);
+      color:var(--text);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.02) inset;
+    }
+    .form button{
+      padding:12px 16px;
+      font-size:16px;
+      background:var(--accent);
+      color:white;
+      border:none;
+      border-radius:12px;
+      min-width:72px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .form button:active{ transform:translateY(1px); }
+
+    /* スニペット一覧 */
+    .list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      margin-bottom:20px;
+    }
+    .item{
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .snippet-btn{
+      flex:1;
+      text-align:left;
+      padding:14px 16px;
+      font-size:17px;
+      border-radius:12px;
+      border:none;
+      background: linear-gradient(180deg, var(--card), color-mix(in srgb, var(--card) 92%, transparent));
+      color:var(--text);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      min-height:56px; /* 押しやすいサイズ */
+    }
+    .snippet-btn:active{ transform:translateY(1px); }
+
+    .small-btn{
+      width:44px;
+      height:44px;
+      border-radius:10px;
+      border:none;
+      background:transparent;
+      color:var(--muted);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .small-btn.delete{ color:var(--danger); }
+    .small-btn:active{ transform:translateY(1px); }
+
+    .meta{
+      font-size:13px;
+      color:var(--muted);
+      margin-bottom:10px;
+    }
+
+    /* トースト（コピー完了メッセージ） */
+    .toast{
+      position:fixed;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:18px;
+      background:linear-gradient(180deg, rgba(0,0,0,0.8), rgba(0,0,0,0.72));
+      color:white;
+      padding:10px 14px;
+      border-radius:12px;
+      font-size:14px;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .22s ease, transform .22s ease;
+      will-change:opacity,transform;
+    }
+    .toast.show{
+      opacity:1;
+      transform: translateX(-50%) translateY(-6px);
+      pointer-events:auto;
+    }
+
+    /* フッタツールバー（オプション） */
+    .footer{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      margin-top:8px;
+    }
+    .ghost{
+      background:transparent;
+      border:1px solid rgba(0,0,0,0.06);
+      padding:10px 12px;
+      border-radius:10px;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    /* レスポンシブ */
+    @media (max-width:420px){
+      .form input[type="text"]{ padding:12px 10px; font-size:15px; }
+      .form button{ padding:12px 12px; font-size:15px; }
+      .snippet-btn{ font-size:16px; padding:12px 12px; min-height:56px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>定型文コピー</h1>
+        <p>クリックでクリップボードへコピーします（ローカル保存）</p>
+      </div>
+    </header>
+
+    <div class="form" role="search" aria-label="定型文追加フォーム">
+      <input id="newText" type="text" placeholder="新しい定型文を入力（例: お世話になっております）" aria-label="定型文入力" />
+      <button id="addBtn" aria-label="追加">追加</button>
+    </div>
+
+    <div class="meta">保存された定型文（クリックでコピー）</div>
+    <div id="list" class="list" aria-live="polite"></div>
+
+    <div class="footer">
+      <button id="exportBtn" class="ghost" title="JSONとしてエクスポート">エクスポート</button>
+      <button id="importBtn" class="ghost" title="JSONをインポート">インポート</button>
+      <button id="clearBtn" class="ghost" title="全て削除">全削除</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="assertive">コピーしました</div>
+
+  <input type="file" id="fileInput" accept="application/json" style="display:none" />
+
+  <script>
+    // シンプルな定型文アプリ（ローカルストレージ）
+    const STORAGE_KEY = 'snippets-v1';
+    const listEl = document.getElementById('list');
+    const newText = document.getElementById('newText');
+    const addBtn = document.getElementById('addBtn');
+    const toastEl = document.getElementById('toast');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const fileInput = document.getElementById('fileInput');
+
+    let snippets = [];
+
+    // 初期データ（初回のみ）
+    const defaultSnippets = [
+      "お世話になっております。\nよろしくお願いいたします。",
+      "ご確認のほど、よろしくお願いいたします。",
+      "ありがとうございます。助かりました！",
+    ];
+
+    function load(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(raw){
+          snippets = JSON.parse(raw);
+        } else {
+          snippets = defaultSnippets.slice();
+          save();
+        }
+      }catch(e){
+        snippets = defaultSnippets.slice();
+      }
+      render();
+    }
+
+    function save(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(snippets));
+    }
+
+    function render(){
+      listEl.innerHTML = '';
+      if(snippets.length === 0){
+        const p = document.createElement('div');
+        p.className = 'meta';
+        p.textContent = '定型文がありません。上の入力から追加してください。';
+        listEl.appendChild(p);
+        return;
+      }
+      snippets.forEach((text, idx) => {
+        const item = document.createElement('div');
+        item.className = 'item';
+
+        const btn = document.createElement('button');
+        btn.className = 'snippet-btn';
+        btn.type = 'button';
+        btn.textContent = text;
+        btn.title = 'クリックでコピー';
+        btn.addEventListener('click', () => copySnippet(text));
+
+        // 小さい削除ボタン
+        const del = document.createElement('button');
+        del.className = 'small-btn delete';
+        del.type = 'button';
+        del.title = '削除';
+        del.innerHTML = '&#128465;'; // ゴミ箱アイコン（簡易）
+        del.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if(confirm('この定型文を削除しますか？')) {
+            snippets.splice(idx,1);
+            save();
+            render();
+          }
+        });
+
+        item.appendChild(btn);
+        item.appendChild(del);
+        listEl.appendChild(item);
+      });
+    }
+
+    async function copySnippet(text){
+      // まず navigator.clipboard を試す（セキュアコンテキストで動作）
+      try{
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          await navigator.clipboard.writeText(text);
+        } else {
+          // フォールバック: textarea を使ったコピー
+          fallbackCopy(text);
+        }
+        showToast('クリップボードにコピーしました');
+      }catch(err){
+        try { fallbackCopy(text); showToast('クリップボードにコピーしました'); }
+        catch(e){ showToast('コピーに失敗しました'); console.error(e); }
+      }
+    }
+
+    function fallbackCopy(text){
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      // 画面外へ
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if(!ok) throw new Error('copy failed');
+    }
+
+    function showToast(msg){
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      clearTimeout(toastEl._t);
+      toastEl._t = setTimeout(()=> toastEl.classList.remove('show'), 1800);
+    }
+
+    addBtn.addEventListener('click', () => {
+      const v = newText.value.trim();
+      if(!v) {
+        newText.focus();
+        newText.style.outline = '2px solid rgba(255,100,80,0.15)';
+        setTimeout(()=> newText.style.outline = '', 600);
+        return;
+      }
+      snippets.unshift(v); // 新しいものを先頭に
+      save();
+      render();
+      newText.value = '';
+      newText.focus();
+    });
+
+    // Enterで追加
+    newText.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter') {
+        e.preventDefault();
+        addBtn.click();
+      }
+    });
+
+    // 全削除
+    clearBtn.addEventListener('click', () => {
+      if(confirm('保存されている定型文を全て削除しますか？')) {
+        snippets = [];
+        save();
+        render();
+      }
+    });
+
+    // エクスポート（JSONをダウンロード）
+    exportBtn.addEventListener('click', () => {
+      const data = JSON.stringify(snippets, null, 2);
+      const blob = new Blob([data], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'snippets.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    // インポート（JSON読み込み）
+    importBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const arr = JSON.parse(reader.result);
+          if(Array.isArray(arr) && arr.every(x => typeof x === 'string')){
+            if(confirm('インポートすると現在の定型文は置換されます。続けますか？')){
+              snippets = arr;
+              save();
+              render();
+            }
+          } else {
+            alert('不正なフォーマットです。文字列の配列を期待しています。');
+          }
+        }catch(err){
+          alert('ファイルの読み込みに失敗しました。JSON形式を確認してください。');
+        }
+        fileInput.value = '';
+      };
+      reader.readAsText(f);
+    });
+
+    // 初期化
+    load();
+  </script>
+</body>
+</html>
