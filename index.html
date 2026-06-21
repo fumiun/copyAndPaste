@@ -114,6 +114,7 @@
       color:var(--text);
       box-shadow: 0 2px 6px rgba(0,0,0,0.04);
       min-height:56px; /* 押しやすいサイズ */
+      order: 1; /* ensure snippet is on the left */
     }
     .snippet-btn:active{ transform:translateY(1px); }
 
@@ -127,6 +128,7 @@
       display:inline-flex;
       align-items:center;
       justify-content:center;
+      order: 2; /* ensure delete button appears on the right */
     }
     .small-btn.delete{ color:var(--danger); }
     .small-btn:active{ transform:translateY(1px); }
