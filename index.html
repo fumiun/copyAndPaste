@@ -110,7 +110,8 @@
       font-size:17px;
       border-radius:12px;
       border:none;
-      background: linear-gradient(180deg, var(--card), color-mix(in srgb, var(--card) 92%, transparent));
+      /* 明度を上げるためにカード色を白と少量ミックスして明るくする */
+      background: linear-gradient(180deg, color-mix(in srgb, var(--card) 96%, white 4%), color-mix(in srgb, var(--card) 88%, white 12%));
       color:var(--text);
       box-shadow: 0 2px 6px rgba(0,0,0,0.04);
       min-height:56px; /* 押しやすいサイズ */
